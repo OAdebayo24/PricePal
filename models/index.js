@@ -4,6 +4,7 @@ const { Sequelize, DataTypes } = require("sequelize");
 
 // const sequelize = new Sequelize(
 //   dbConfig.database,
+//   // dbConfig.direct_url,
 //   dbConfig.user,
 //   dbConfig.password,
 //   {
