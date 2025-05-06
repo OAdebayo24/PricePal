@@ -37,14 +37,14 @@ app.set("view engine", "ejs");
 app.use("/", AuthRoute);
 
 app.use(
-  "/register-store", 
+  "/register-store",
+  passport.authenticate("jwt", { session: false }),
   RegisterStoreRoute,
-  passport.authenticate("jwt", { session: false })
-)
+);
 
 app.use(
   "/vendors",
-  // passport.authenticate("jwt", { session: false }),
+  passport.authenticate("jwt", { session: false }),
   checkRevokedToken,
   VendorRoute
 );

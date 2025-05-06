@@ -1,7 +1,9 @@
 const { registerStore } = require("../models");
+const { vendors } = require("../models");
 
-const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
-const isValidPhone = (phone) => /^\+?[0-9]{7,15}$/.test(phone);
+
+// const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
+// const isValidPhone = (phone) => /^\+?[0-9]{7,15}$/.test(phone);
 
 const createStore = async (req, res) => {
   try {
@@ -10,7 +12,6 @@ const createStore = async (req, res) => {
       business_name,
       business_type,
       email,
-      vendor_id,
       business_address,
       phone_number,
       business_reg_number,
@@ -18,78 +19,56 @@ const createStore = async (req, res) => {
       close_time,
     } = req.body;
 
-    // Basic validations
+    const vendor = req.vendor;
+
+    if (!vendor) {
+      return res.status(403).json({ message: "Unauthorized vendor access." });
+    }
+
+    // Validate required fields
     const requiredFields = {
       name,
       business_name,
       business_type,
       email,
-      vendor_id,
       business_address,
       business_reg_number,
       open_time,
       close_time,
     };
 
-    const missingFields = Object.entries(requiredFields)
-      .filter(([_, value]) => !value)
-      .map(([key]) => key);
-
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Missing required fields: ${missingFields.join(", ")}`,
-      });
-    }
-
-    if (!isValidEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email format",
-      });
-    }
-
-    if (phone_number && !isValidPhone(phone_number)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid phone number format",
-      });
-    }
-
-    if (open_time >= close_time) {
-      return res.status(400).json({
-        success: false,
-        message: "Open time must be before close time",
-      });
-    }
-
-    // Check uniqueness
-    const existingEmail = await registerStore.findOne({ where: { email } });
-    if (existingEmail) {
-      return res.status(409).json({
-        success: false,
-        message: "A store with this email already exists",
-      });
-    }
-
-    if (phone_number) {
-      const existingPhone = await registerStore.findOne({
-        where: { phone_number },
-      });
-      if (existingPhone) {
-        return res.status(409).json({
-          success: false,
-          message: "A store with this phone number already exists",
-        });
+    for (const [key, value] of Object.entries(requiredFields)) {
+      if (!value || typeof value !== "string" || value.trim().length === 0) {
+        return res
+          .status(400)
+          .json({ message: `Missing or invalid field: ${key}` });
       }
     }
 
-    const store = await registerStore.create({
+    if (open_time >= close_time) {
+      return res
+        .status(400)
+        .json({ message: "Open time must be before close time." });
+    }
+
+    // Prevent duplicate store registration for same vendor
+    const existingStore = await registerStore.findOne({
+      where: { vendor_id: vendor.id },
+    });
+
+    if (existingStore) {
+      return res.status(400).json({
+        message: "Vendor has already registered a store.",
+      });
+    }
+
+    // Create store
+    const newStore = await registerStore.create({
       name,
       business_name,
       business_type,
       email,
-      vendor_id,
+      vendor_id: vendor.id,
       business_address,
       phone_number,
       business_reg_number,
@@ -98,19 +77,26 @@ const createStore = async (req, res) => {
     });
 
     return res.status(201).json({
-      success: true,
-      message: "Store registered successfully",
-      data: store,
+      message: "Store registered successfully.",
+      store: newStore,
     });
-  } catch (err) {
-    console.error("Register Store Error:", err);
+  } catch (error) {
+    console.error("Error creating store:", error);
+
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({
+        message: "Email or phone number already exists.",
+      });
+    }
 
     return res.status(500).json({
-      success: false,
-      message: "Internal server error",
+      message: "Internal server error.",
+      error: error.message,
     });
   }
 };
+
+
 
 const updateStore = async (req, res) => {
   try {

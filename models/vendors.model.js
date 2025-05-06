@@ -16,6 +16,14 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false
       },
+      user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: "Users",
+          key: "id"
+        }
+      },
       business_name: {
         type: DataTypes.STRING,
         allowNull: false
@@ -27,9 +35,9 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  // vendors.associate = (models) => {
-  //   vendors.belongsTo(models.User, { foreignKey: "user_id" });
-  // };
+  VendorModel.associate = (models) => {
+    VendorModel.belongsTo(models.users, { foreignKey: "user_id" });
+  };
 
   return VendorModel;
 };

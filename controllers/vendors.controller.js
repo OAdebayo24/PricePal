@@ -5,50 +5,55 @@ function isValidPhoneNumber(phone) {
 }
 
 module.exports = {
-  async createVendor(req, res) {
-    try {
-      const { location, phone_number, business_name } = req.body;
+  async createVendor (req, res) {
+    const { phone_number, location, business_name } = req.body;
+    if (!location || typeof location !== "string" || location.trim().length < 2) {
+      return res
+        .status(400)
+        .json({ status: "fail", message: "Invalid or missing location." });
+    }
 
-      if (
-        !location ||
-        typeof location !== "string" ||
-        location.trim().length < 2
-      ) {
-        return res
-          .status(400)
-          .json({ status: "fail", message: "Invalid or missing location." });
-      }
-
-      if (!phone_number || !isValidPhoneNumber(phone_number)) {
-        return res
-          .status(400)
-          .json({
-            status: "fail",
-            message: "Invalid or missing phone number.",
-          });
-      }
-
-      if (
-        !business_name ||
-        typeof business_name !== "string" ||
-        business_name.trim().length < 2
-      ) {
-        return res
-          .status(400)
-          .json({
-            status: "fail",
-            message: "Invalid or missing business name.",
-          });
-      }
-
-      const Vendor = await vendors.create({
-        location,
-        phone_number,
-        business_name,
+    if (
+      !business_name ||
+      typeof business_name !== "string" ||
+      business_name.trim().length < 2
+    ) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Invalid or missing business name.",
       });
-      return res.status(201).json({ status: "success", data: Vendor });
+    }
+
+    if (!phone_number || !isValidPhoneNumber(phone_number)) {
+          return res
+            .status(400)
+            .json({
+              status: "fail",
+              message: "Invalid or missing phone number.",
+            });
+        }
+
+    try {
+      const existingVendor = await vendors.findOne({
+        where: { user_id: req.user.id },
+      });
+
+      if (existingVendor) {
+        return res
+          .status(400)
+          .json({ message: "Vendor already exists for this user." });
+      }
+
+      const vendor = await vendors.create({
+        phone_number,
+        location,
+        business_name,
+        user_id: req.user.id,
+      });
+
+      return res.status(201).json({ message: "Vendor created", vendor });
     } catch (error) {
-      return res.status(500).json({ status: "error", message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   },
 

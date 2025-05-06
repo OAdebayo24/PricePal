@@ -2,15 +2,15 @@ const { vendors } = require("../models");
 
 async function verifyVendor(req, res, next) {
   try {
-    const vendorId = req.user?.id;
+    const userId = req.user?.id;
 
-    if (!vendorId) {
+    if (!userId) {
       return res
         .status(403)
         .json({ status: 403, message: "Unauthorized access" });
     }
 
-    const userData = await vendors.findOne({ where: { id: vendorId } }); // Sequelize query
+    const vendorData = await vendors.findOne({ where: { user_id: userId } }); // Sequelize query
 
     // if (!userData || userData.role.toLowerCase() !== "vendor") {
     //   return res.status(403).json({
@@ -19,12 +19,14 @@ async function verifyVendor(req, res, next) {
     //   });
     // }
     
-    if (!userData ) {
+    if (!vendorData) {
       return res.status(403).json({
         status: 403,
         message: "Only vendors are authorized to access this resource.",
       });
     }
+
+    req.vendor = vendorData
 
     next();
   } catch (err) {

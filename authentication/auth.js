@@ -34,10 +34,10 @@ passport.use(
     },
     async (token, done) => {
       try {
-        const user = await users.findOne({ where: { id: token.user.id } });
+        const user = await users.findOne({ where: { id: token.id } });
         if (!user) return done(null, false);
         // console.log(token);
-        return done(null, { id: user.id, role: user.role });
+        return done(null, { id: user.id});
       } catch (error) {
         return done(error);
       }
@@ -81,74 +81,58 @@ passport.use(
 );
 
 // Signup Strategy
-// const allowedRoles = ["admin", "user"];
 
-passport.use(
-  "signup",
-  new localStrategy(
-    {
-      usernameField: "email_address",
-      passwordField: "password",
-      passReqToCallback: true,
-    },
-    async (req, email_address, password, done) => {
-      const transaction = await sequelize.transaction();
-      try {
-    
-        // Convert role to lowercase for case insensitivity
-        // const role = req.body.role ? req.body.role.toLowerCase() : "";
+  passport.use(
+    "signup",
+    new localStrategy(
+      {
+        usernameField: "email_address",
+        passwordField: "password",
+        passReqToCallback: true,
+      },
+      async (req, email_address, password, done) => {
+        const { confirm_password } = req.body;
 
-        // Validate role
-        // if (!allowedRoles.includes(role)) {
-        //   return done(null, false, {
-        //     message: "Invalid role. Allowed roles are Admin, User, or vendor.",
-        //   });
-        // }
-
-        // const formattedRole = role.charAt(0).toUpperCase() + role.slice(1);
-
-        // Check if email already exists
-        const [existingEmail] = await Promise.all([
-          users.findOne({ where: { email_address } }),
-        ]);
-
-        if (existingEmail)
+        if (!password || password.length < 8) {
           return done(null, false, {
-            message: "Email address is already in use",
+            message: "Password must be at least 8 characters long.",
+          });
+        }
+
+        if (password !== confirm_password) {
+          return done(null, false, { message: "Passwords do not match." });
+        }
+
+        const transaction = await sequelize.transaction();
+
+        try {
+          const existingUser = await users.findOne({
+            where: { email_address },
           });
 
-        // Create user
-        const registeredUser = await users.create(
-          {
-            email_address,
-            password,
-            // role: formattedRole,
-          },
-          { transaction }
-        );
+          if (existingUser) {
+            await transaction.rollback();
+            return done(null, false, { message: "Email already in use." });
+          }
 
-        // If the user is an Vendor
-        // if (formattedRole === "Vendor") {
-        //   await vendors.create(
-        //     {
-        //       user_id: registeredUser.id,
-        //       verification_status: "Not Verified",
-        //     },
-        //     { transaction }
-        //   );
-        // }
+          const newUser = await users.create(
+            { email_address, password },
+            { transaction }
+          );
 
-        await transaction.commit();
-        return done(null, registeredUser, {
-          message: "User registered successfully",
-        });
-      } catch (error) {
-        await transaction.rollback();
-        return done(error);
+          await transaction.commit();
+          return done(null, newUser, {
+            message: "User registered successfully.",
+          });
+        } catch (error) {
+          await transaction.rollback();
+          return done(error);
+        }
       }
-    }
-  )
-);
+    )
+  );
+
+
 
 // Login Strategy
 
