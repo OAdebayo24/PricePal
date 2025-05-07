@@ -37,7 +37,7 @@ app.set("view engine", "ejs");
 app.use(
   cors({
     // origin: "http://localhost:3000",
-    origin: "https://price-pal-seven.vercel.app/", 
+    origin: "https://price-pal-seven.vercel.app", 
     credentials: true,
   })
 );
