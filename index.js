@@ -15,6 +15,8 @@ const VendorRoute = require("./routes/vendor.routes")
 const AuthRoute = require("./routes/auth.route")
 const RegisterStoreRoute = require("./routes/registerStore.route")
 
+const cors = require("cors");
+
 // use middleware to protect routes
 // const verifyAdmin = require("./middleware/verifyAdmin");
 const verifyVendor = require("./middlewares/verifyVendor.middleware");
@@ -32,6 +34,12 @@ app.use(express.json());
 app.set("views", "views");
 app.set("view engine", "ejs");
 
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 // Routes
 app.use("/", AuthRoute);
